@@ -9,11 +9,11 @@ package polish.tree;
 public class ParseTree {
 	private static final String[] operations = {"+", "-", "*", "/"};
 	private Node root;
-	
+
 	public ParseTree() {
 		//currently no-op
 	}
-	
+
 	/** factory methods */
 	public static ParseTree fromPrefix(String[] keys) {
 		ParseTree tree = new ParseTree();
@@ -22,7 +22,7 @@ public class ParseTree {
 				tree.addLeft(key);
 		return tree;
 	}
-	
+
 	public static ParseTree fromPostfix(String[] keys) {
 		ParseTree tree = new ParseTree();
 		for (int i = keys.length - 1; i >= 0; --i) //http://stackoverflow.com/questions/1642028/what-is-the-name-of-the-operator
@@ -30,7 +30,7 @@ public class ParseTree {
 				tree.addRight(keys[i]);
 		return tree;
 	}
-	
+
 	/** returns true iff key represents is a valid operation */
 	public static boolean isOperation(String key) {
 		for (String operation : operations)
@@ -38,7 +38,7 @@ public class ParseTree {
 				return true;
 		return false;
 	}
-	
+
 	/** evaluates operands by the operations specified in a given string */
 	private static int evaluate(int lhs, String operation, int rhs) {
 		//in an interpreted language, we could use fancy reflection here
@@ -49,48 +49,60 @@ public class ParseTree {
 			case "*": return lhs * rhs;
 			case "/": return lhs / rhs;
 		}
-		
+
 		return 0; //this should never happen
 	}
-	
+
+	private static int precedence(String operation) {
+		//implements MDAS
+		switch(operation) {
+			case "+": case "-": return 1;
+			case "*": case "/": return 2;
+		}
+
+		return -1; //with this, if you pass a non-operation as an arg, things might still work
+	}
+
 	/** print entire tree as prefix */
 	public String toPrefix() {
 		return toPrefix(root);
 	}
-	
+
 	private String toPrefix(Node node) {
 		if (node.left == null)
 			return node.key;
 		return node.key + " " + toPrefix(node.left) + " " + toPrefix(node.right);
 	}
-	
+
 	/** print entire tree as postfix */
 	public String toPostfix() {
 		return toPostfix(root);
 	}
-	
+
 	private String toPostfix(Node node) {
 		if (node.left == null)
 			return node.key;
 		return toPostfix(node.left) + " " + toPostfix(node.right) + " " + node.key;
 	}
-	
+
 	/** print entire tree as postfix */
 	public String toInfix() {
-		return toInfix(root);
+		return toInfix(root, -1);
 	}
-	
-	private String toInfix(Node node) {
+
+	private String toInfix(Node node, int precedence) {
 		if (node.left == null)
 			return node.key;
-		return "(" + toInfix(node.left) + " " + node.key + " " + toInfix(node.right) + ")";
+		if (precedence(node.key) < precedence)
+			return "(" + toInfix(node.left, precedence(node.key)) + " " + node.key + " " + toInfix(node.right, precedence(node.key)) + ")";
+		return toInfix(node.left, precedence(node.key)) + " " + node.key + " " + toInfix(node.right, precedence(node.key));
 	}
-	
+
 	/** evaluate and return the value of the entire tree */
 	public int evaluate() {
 		return evaluate(root);
 	}
-	
+
 	private int evaluate(Node node) {
 		if (isOperation(node.key))
 			return evaluate(evaluate(node.left), node.key, evaluate(node.right));
@@ -104,27 +116,27 @@ public class ParseTree {
 		else
 			addLeftRecursive(root, key);
 	}
-	
+
 	private boolean addLeftRecursive(Node node, String key) {
 		if (!isOperation(node.key))
 			return false;
-		
+
 		if (node.left == null) {
 			node.left = new Node(key);
 			return true;
 		}
-		
+
 		if (addLeftRecursive(node.left, key))
 			return true;
-		
+
 		if (node.right == null) {
 			node.right = new Node(key);
 			return true;
 		}
-		
+
 		return addLeftRecursive(node.right, key);
 	}
-	
+
 	/** adds a new node to the rightmost possible position without violating the tree's properties */
 	public void addRight(String key) {
 		if (root == null)
@@ -132,24 +144,24 @@ public class ParseTree {
 		else
 			addRightRecursive(root, key);
 	}
-	
+
 	private boolean addRightRecursive(Node node, String key) {
 		if (!isOperation(node.key))
 			return false;
-		
+
 		if (node.right == null) {
 			node.right = new Node(key);
 			return true;
 		}
-		
+
 		if (addRightRecursive(node.right, key))
 			return true;
-		
+
 		if (node.left == null) {
 			node.left = new Node(key);
 			return true;
 		}
-		
+
 		return addRightRecursive(node.left, key);
 	}
 }
